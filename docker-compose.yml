@@ -1,0 +1,50 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:14.1
+    env_file: ./config/.env
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - db_net
+  app:
+    build: 
+      context: ./config
+      dockerfile: app.Dockerfile
+    env_file: ./config/.env
+    expose:
+      - "8000"
+    networks:
+      - db_net
+      - server_net
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./app:/var/app
+      - static:/var/app/static
+    working_dir: /var/app
+    command: gunicorn -c /var/tmp/conf.py app.wsgi:application
+    depends_on: 
+      - db
+  server:
+    build: 
+      context: ./config
+      dockerfile: nginx.Dockerfile
+    #command: [nginx-debug, '-g', 'daemon off;']
+    networks:
+      - server_net
+    volumes:
+      - static:/var/app/static
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+
+networks:
+  db_net:
+  server_net:
+
+volumes:
+  db-data:
+  static:
+
